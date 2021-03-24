@@ -1,77 +1,77 @@
 # frozen_string_literal: true
 
-require_relative 'node'
+require_relative 'square'
 
 # game board
 class Board
-  attr_accessor :nodes
+  attr_accessor :squares
 
   def initialize
-    @nodes = nodes_array
+    @squares = squares_array
   end
 
-  def nodes_array
-    nodes = []
-    column_cord = 'a'
-    row_cord = 8
+  def squares_array
+    squares = []
+    file_cord = 'a'
+    rank_cord = 8
 
-    until nodes.length == 8 * 8
-      node = Node.new(column_cord, row_cord)
-      nodes << node
+    until squares.length == 8 * 8
+      square = Square.new(file_cord, rank_cord)
+      squares << square
 
-      column_cord = (column_cord.ord + 1).chr
+      file_cord = (file_cord.ord + 1).chr
 
-      if column_cord == 'i'
-        row_cord -= 1
-        column_cord = 'a'
+      if file_cord == 'i'
+        rank_cord -= 1
+        file_cord = 'a'
       end
     end
 
-    nodes
+    squares
   end
 
   def display
-    print_column_cords
+    print_file_cords
 
     print_board
 
-    print_column_cords
+    print_file_cords
   end
 
-  def print_column_cords
+  def print_file_cords
     ('a'..'h').to_a.each { |letter| print "    #{letter}" }
     puts
   end
 
   def print_board
-    8.downto(1) { |i| puts row(i) }
+    8.downto(1) { |i| puts rank(i) }
   end
 
-  def row_nodes(i)
-    row_nodes = []
-    nodes.each { |node| row_nodes << node if node.row_cord == i }
-    row_nodes
+  def rank_squares(i)
+    rank_squares = []
+    squares.each { |square| rank_squares << square if square.rank_cord == i }
+    rank_squares
   end
 
-  def row(i)
-    row = []
+  def rank(i)
+    rank = []
 
-    row_nodes(i).each do |row_node|
-      row << case row_node.column_cord
-             when 'a'
-               "#{row_node.row_cord} [ #{row_node.piece} ]"
-             when 'h'
-               "[ #{row_node.piece} ] #{row_node.row_cord}"
-             else
-               "[ #{row_node.piece} ]"
-             end
+    rank_squares(i).each do |rank_square|
+      rank << case rank_square.file_cord
+              when 'a'
+                "#{rank_square.rank_cord} [ #{rank_square.piece} ]"
+              when 'h'
+                "[ #{rank_square.piece} ] #{rank_square.rank_cord}"
+              else
+                "[ #{rank_square.piece} ]"
+              end
     end
 
-    row.join
+    rank.join
   end
 
-  def get_node(cords)
-    nodes.each { |node| return node if node.cords == cords }
+  def get_square(cords)
+    square.each { |square| return square if square.cords == cords }
     nil
   end
 end
