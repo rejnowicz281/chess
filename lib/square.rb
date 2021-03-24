@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # node used in board
-class Node
+class Square
   attr_reader :cords, :column_cord, :row_cord
   attr_accessor :piece
 
