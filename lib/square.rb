@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-# node used in board
+# square used in board
 class Square
-  attr_reader :cords, :column_cord, :row_cord
+  attr_reader :cords, :file_cord, :rank_cord
   attr_accessor :piece
 
-  def initialize(column_cord, row_cord, piece = ' ')
-    @cords = "#{column_cord}#{row_cord}"
+  def initialize(file_cord, rank_cord, piece = ' ')
+    @cords = "#{file_cord}#{rank_cord}"
     @piece = piece
-    @column_cord = column_cord
-    @row_cord = row_cord
+    @file_cord = file_cord
+    @rank_cord = rank_cord
   end
 
   def remove_piece
