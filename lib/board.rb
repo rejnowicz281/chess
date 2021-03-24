@@ -4,63 +4,74 @@ require_relative 'node'
 
 # game board
 class Board
-  attr_reader :size
   attr_accessor :nodes
 
-  def initialize(size = 8)
-    @size = size
-    @nodes = assign_nodes
+  def initialize
+    @nodes = nodes_array
   end
 
-  def assign_nodes
+  def nodes_array
     nodes = []
-    letter_cord = 'a'
-    off_board_letter = (letter_cord.ord + size).chr
-    num_cord = size
+    column_cord = 'a'
+    row_cord = 8
 
-    until nodes.length == size * size
-      node = Node.new("#{letter_cord}#{num_cord}")
+    until nodes.length == 8 * 8
+      node = Node.new(column_cord, row_cord)
       nodes << node
-      letter_cord = (letter_cord.ord + 1).chr
 
-      if letter_cord == off_board_letter
-        num_cord -= 1       # push in nodes with proper coordinates
-        letter_cord = 'a'
+      column_cord = (column_cord.ord + 1).chr
+
+      if column_cord == 'i'
+        row_cord -= 1
+        column_cord = 'a'
       end
     end
 
     nodes
   end
 
-  def show_board
-    print_letter_cords
+  def display
+    print_column_cords
 
-    nodes.each do |node|
-      case node.cords[0]
-      when 'a'
-        print " #{node.cords[1]} [ #{node.piece} ]"
-      when nodes.last.cords[0]
-        puts "[ #{node.piece} ] #{node.cords[1]}"
-      else
-        print "[ #{node.piece} ]"
-      end
+    print_board
+
+    print_column_cords
+  end
+
+  def print_column_cords
+    ('a'..'h').to_a.each { |letter| print "    #{letter}" }
+    puts
+  end
+
+  def print_board
+    8.downto(1) { |i| puts row(i) }
+  end
+
+  def row_nodes(i)
+    row_nodes = []
+    nodes.each { |node| row_nodes << node if node.row_cord == i }
+    row_nodes
+  end
+
+  def row(i)
+    row = []
+
+    row_nodes(i).each do |row_node|
+      row << case row_node.column_cord
+             when 'a'
+               "#{row_node.row_cord} [ #{row_node.piece} ]"
+             when 'h'
+               "[ #{row_node.piece} ] #{row_node.row_cord}"
+             else
+               "[ #{row_node.piece} ]"
+             end
     end
 
-    print_letter_cords
+    row.join
   end
 
   def get_node(cords)
     nodes.each { |node| return node if node.cords == cords }
     nil
   end
-
-  def print_letter_cords
-    letter_cords = ('a'..nodes.last.cords[0]).to_a
-    letter_cords.each { |letter| print letter == 'a' ?  "     #{letter}" : "    #{letter}" }
-    puts
-  end
 end
-
-b = Board.new
-
-b.show_board
