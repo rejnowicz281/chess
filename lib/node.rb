@@ -2,12 +2,14 @@
 
 # node used in board
 class Node
-  attr_reader :cords
+  attr_reader :cords, :column_cord, :row_cord
   attr_accessor :piece
 
-  def initialize(cords, piece = ' ')
-    @cords = cords
+  def initialize(column_cord, row_cord, piece = ' ')
+    @cords = "#{column_cord}#{row_cord}"
     @piece = piece
+    @column_cord = column_cord
+    @row_cord = row_cord
   end
 
   def remove_piece
