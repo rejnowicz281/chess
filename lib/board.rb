@@ -71,7 +71,7 @@ class Board
   end
 
   def get_square(cords)
-    square.each { |square| return square if square.cords == cords }
+    squares.each { |square| return square if square.cords == cords }
     nil
   end
 end
