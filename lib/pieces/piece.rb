@@ -1,18 +1,13 @@
 # frozen_string_literal: true
 
-# chess piece placed on a board square
-class Piece
-  @@black_unicode = "\u2609"
-  @@white_unicode = "\u2609"
+require_relative 'chess_symbols'
 
-  attr_reader :color, :unicode
+# piece placed on a board square
+class Piece
+  include ChessSymbols
+  attr_reader :color
 
   def initialize(color)
     @color = color
-    @unicode = assign_unicode
-  end
-
-  def assign_unicode
-    color == 'black' ? @@black_unicode : @@white_unicode
   end
 end

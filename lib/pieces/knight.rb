@@ -4,6 +4,7 @@ require_relative 'piece'
 
 # knight chess piece
 class Knight < Piece
-  @@black_unicode = "\u2658"
-  @@white_unicode = "\u265e"
+  def unicode
+    color == 'black' ? BLACK_KNIGHT : WHITE_KNIGHT
+  end
 end
