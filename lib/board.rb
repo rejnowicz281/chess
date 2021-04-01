@@ -59,11 +59,11 @@ class Board
     rank_squares(i).each do |rank_square|
       rank << case rank_square.file_cord
               when 'a'
-                "#{rank_square.rank_cord} [ #{rank_square.piece} ]"
+                "#{rank_square.rank_cord} [ #{rank_square.piece_symbol} ]"
               when 'h'
-                "[ #{rank_square.piece} ] #{rank_square.rank_cord}"
+                "[ #{rank_square.piece_symbol} ] #{rank_square.rank_cord}"
               else
-                "[ #{rank_square.piece} ]"
+                "[ #{rank_square.piece_symbol} ]"
               end
     end
 
