@@ -2,7 +2,6 @@
 
 require_relative 'board'
 require_relative 'innitial_placement'
-Dir['pieces/*.rb'].each { |piece| require_relative piece }
 
 # game class
 class Game
