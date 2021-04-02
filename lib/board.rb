@@ -74,4 +74,46 @@ class Board
     squares.each { |square| return square if square.cords == cords }
     nil
   end
+
+  def path(start, destination)
+    path = []
+    curr_square = get_square(start)
+
+    until curr_square.cords == destination
+      if curr_square.cords[0].ord < destination[0].ord
+        new_file = (curr_square.cords[0].ord + 1).chr
+      elsif curr_square.cords[0].ord > destination[0].ord
+        new_file = (curr_square.cords[0].ord - 1).chr
+      else
+        new_file = curr_square.cords[0]
+      end
+
+      if curr_square.cords[1].to_i < destination[1].to_i
+        new_rank = "#{curr_square.cords[1].to_i + 1}"
+      elsif curr_square.cords[1].to_i > destination[1].to_i
+        new_rank = "#{curr_square.cords[1].to_i - 1}"
+      else
+        new_rank = curr_square.cords[1]
+      end
+
+      new_cords = "#{new_file}#{new_rank}"
+      curr_square = get_square(new_cords)
+
+      path << curr_square
+    end
+    path
+  end
+
+  def path_clear?(start, destination)
+    path = path(start, destination)
+
+    path.each { |square| return false if square.piece != ' ' }
+
+    true
+  end
+
+  def invalid_path?(start, destination)
+    get_square(start).nil? || get_square(destination).nil? || get_square(start).movement.nil? ||
+      !get_square(start).movement.include?(destination) || !path_clear?(start, destination)
+  end
 end
