@@ -103,17 +103,4 @@ class Board
     end
     path
   end
-
-  def path_clear?(start, destination)
-    path = path(start, destination)
-
-    path.each { |square| return false if square.piece != ' ' }
-
-    true
-  end
-
-  def invalid_path?(start, destination)
-    get_square(start).nil? || get_square(destination).nil? || get_square(start).movement.nil? ||
-      !get_square(start).movement.include?(destination) || !path_clear?(start, destination)
-  end
 end
