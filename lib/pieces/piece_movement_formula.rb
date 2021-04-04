@@ -5,9 +5,11 @@
 module PieceMovementFormula
   BLACK_PAWN_MOVEMENT_FORMULA = [[0, -1]].freeze
   BLACK_PAWN_CAPTURING_MOVEMENT_FORMULA = [[-1, -1], [1, -1]].freeze
+  BLACK_PAWN_FIRST_MOVE_FORMULA = [[0, -1], [0, -2]].freeze
 
   WHITE_PAWN_MOVEMENT_FORMULA = [[0, 1]].freeze
   WHITE_PAWN_CAPTURING_MOVEMENT_FORMULA = [[-1, 1], [1, 1]].freeze
+  WHITE_PAWN_FIRST_MOVE_FORMULA = [[0, 1], [0, 2]].freeze
 
   ROOK_MOVEMENT_FORMULA = [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8],
                            [0, -1], [0, -2], [0, -3], [0, -4], [0, -5], [0, -6], [0, -7], [0, -8],
