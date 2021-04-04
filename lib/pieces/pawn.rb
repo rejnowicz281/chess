@@ -9,7 +9,12 @@ class Pawn < Piece
   end
 
   def movement_formula
-    color == 'black' ? BLACK_PAWN_MOVEMENT_FORMULA : WHITE_PAWN_MOVEMENT_FORMULA
+    case previous_move
+    when nil
+      color == 'black' ? BLACK_PAWN_FIRST_MOVE_FORMULA : WHITE_PAWN_FIRST_MOVE_FORMULA
+    else
+      color == 'black' ? BLACK_PAWN_MOVEMENT_FORMULA : WHITE_PAWN_MOVEMENT_FORMULA
+    end
   end
 
   def capturing_movement_formula

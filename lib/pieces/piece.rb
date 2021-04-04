@@ -9,9 +9,10 @@ class Piece
   include PieceMovementFormula
 
   attr_reader :color
-  attr_accessor :cords
+  attr_accessor :cords, :previous_move
 
   def initialize(color = 'white')
     @color = color
+    @previous_move = nil
   end
 end
