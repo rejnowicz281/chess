@@ -23,7 +23,7 @@ class Square
   end
 
   def movement
-    return if piece == ' '
+    return [] if piece == ' '
 
     movement = []
     piece.movement_formula.each do |formula_cords|
