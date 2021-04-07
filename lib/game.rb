@@ -7,6 +7,7 @@ Dir['pieces/*.rb'].each { |piece| require_relative piece }
 # game class
 class Game
   include InnitialPlacement
+  include PawnBehaviour
   attr_reader :board
 
   def initialize
@@ -74,6 +75,10 @@ class Game
     legal_moves = []
 
     square.movement.each { |move| legal_moves << move unless invalid_path?(square.cords, move) || invalid_move?(square.piece.color, square.cords, move) }
+
+    if square.piece.is_a? Pawn
+      legal_moves = remove_illegal_pawn_moves(cords, legal_moves)
+    end
 
     legal_moves
   end
