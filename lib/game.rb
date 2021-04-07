@@ -20,9 +20,10 @@ class Game
     move = input_move
     start = move.split('-').first
     destination = move.split('-').last
+
     puts "Legal moves: #{legal_moves_of(start).join(' ')}"
 
-    return play_turn(curr_player_color) unless legal_moves_of(start).include?(destination)
+    return play_turn(curr_player_color) if invalid_move?(curr_player_color, start, destination) || !legal_moves_of(start).include?(destination)
 
     move(start, destination)
   end
@@ -36,8 +37,9 @@ class Game
     start_square = board.get_square(start)
     destination_square = board.get_square(destination)
 
-    invalid_path?(start, destination) || start_square.piece.color != curr_player_color ||
-      destination_square.piece != ' ' && destination_square.piece.color == curr_player_color
+    start_square.piece == ' ' || start_square.piece.color != curr_player_color ||
+      destination_square.piece != ' ' && destination_square.piece.color == curr_player_color ||
+      start == destination
   end
 
   def move(start, destination)
@@ -54,7 +56,7 @@ class Game
 
     path = board.path(start, destination)
 
-    path.each { |square| return false if square.piece != ' ' }
+    path.each { |square| return false if square.piece != ' ' && square.cords != destination }
 
     true
   end
@@ -71,15 +73,8 @@ class Game
     square = board.get_square(cords)
     legal_moves = []
 
-    square.movement.each { |move| legal_moves << move unless invalid_move?(square.piece.color, square.cords, move) }
+    square.movement.each { |move| legal_moves << move unless invalid_path?(square.cords, move) || invalid_move?(square.piece.color, square.cords, move) }
 
     legal_moves
   end
-end
-
-g = Game.new
-
-loop do
-g.play_turn('white')
-g.play_turn('black')
 end
