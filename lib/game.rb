@@ -16,31 +16,53 @@ class Game
   end
 
   def play_turn(curr_player_color)
-    board.display
     puts "Current player: #{curr_player_color}."
-    move = input_move
-    start = move.split('-').first
-    destination = move.split('-').last
+    piece_to_move = choose_piece_to_move(curr_player_color)
+    puts "Legal moves: #{legal_moves_of(piece_to_move)}"
 
-    puts "Legal moves: #{legal_moves_of(start).join(' ')}"
+    destination = choose_destination(piece_to_move)
 
-    return play_turn(curr_player_color) if invalid_move?(curr_player_color, start, destination) || !legal_moves_of(start).include?(destination)
-
-    move(start, destination)
+    move(piece_to_move, destination)
   end
 
-  def input_move
-    puts 'Type in your move. For example: a2-a3'
-    gets.chomp
+  def choose_piece_to_move(curr_player_color)
+    loop do
+      board.display
+      puts 'Type in cords of the piece you want to move: '
+      piece_to_move = gets.chomp
+      return piece_to_move unless invalid_piece_to_move_cords?(piece_to_move, curr_player_color)
+    end
   end
 
-  def invalid_move?(curr_player_color, start, destination)
+  def invalid_piece_to_move_cords?(piece_to_move, curr_player_color)
+    piece_to_move_square = board.get_square(piece_to_move)
+
+    piece_to_move_square.nil? || piece_to_move_square.piece == ' ' || piece_to_move_square.piece.color != curr_player_color ||
+      legal_moves_of(piece_to_move).empty?
+  end
+
+  def choose_destination(piece_to_move)
+    loop do
+      board.display
+      puts 'Type in where you want to move the piece: '
+      destination = gets.chomp
+      return destination unless invalid_destination_cords?(piece_to_move, destination)
+    end
+  end
+
+  def invalid_destination_cords?(piece_to_move, destination)
+    piece_to_move_color = board.get_square(piece_to_move).piece.color
+    destination_square = board.get_square(destination)
+
+    destination_square.nil? || destination_square.piece != ' ' && destination_square.piece.color == piece_to_move_color ||
+      piece_to_move == destination || !legal_moves_of(piece_to_move).include?(destination)
+  end
+
+  def same_color?(start, destination)
     start_square = board.get_square(start)
     destination_square = board.get_square(destination)
 
-    start_square.piece == ' ' || start_square.piece.color != curr_player_color ||
-      destination_square.piece != ' ' && destination_square.piece.color == curr_player_color ||
-      start == destination
+    destination_square.piece != ' ' && destination_square.piece.color == start_square.piece.color
   end
 
   def move(start, destination)
@@ -70,11 +92,16 @@ class Game
       !start_square.movement.include?(destination) || !path_clear?(start, destination)
   end
 
+  def invalid_move?(start, destination)
+    invalid_path?(start, destination) || same_color?(start, destination)
+  end
+
   def legal_moves_of(cords)
     square = board.get_square(cords)
+
     legal_moves = []
 
-    square.movement.each { |move| legal_moves << move unless invalid_path?(square.cords, move) || invalid_move?(square.piece.color, square.cords, move) }
+    square.movement.each { |move| legal_moves << move unless invalid_move?(cords, move) }
 
     if square.piece.is_a? Pawn
       legal_moves = remove_illegal_pawn_moves(cords, legal_moves)
