@@ -109,4 +109,14 @@ class Game
 
     legal_moves
   end
+
+  def made_double_step_move?(square_cords)
+    square = board.get_square(square_cords)
+    return false unless square.piece.is_a? Pawn
+
+    previous_move = square.piece.previous_move
+    two_backwards = "#{square_cords[0]}#{square_cords[1].to_i + (square.piece.color == 'black' ? 2 : -2)}"
+
+    previous_move == two_backwards
+  end
 end
