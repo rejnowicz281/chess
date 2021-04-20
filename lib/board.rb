@@ -75,6 +75,10 @@ class Board
     nil
   end
 
+  def invalid_cords?(cords)
+    get_square(cords).nil?
+  end
+
   def path(start, destination)
     path = []
     curr_square = get_square(start)
