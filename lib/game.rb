@@ -141,4 +141,28 @@ class Game
     square = board.get_square(square_cords)
     "#{square_cords[0]}#{square_cords[1].to_i + (square.piece.color == 'black' ? -1 : 1)}"
   end
+
+  def enemy_on_left_of?(square_cords)
+    square = board.get_square(square_cords)
+    left = left_of(square_cords)
+
+    return false if left.nil? || left.empty?
+
+    square_color = square.piece.color
+    left_color = left.piece.color
+
+    square_color != left_color
+  end
+
+  def enemy_on_right_of?(square_cords)
+    square = board.get_square(square_cords)
+    right = right_of(square_cords)
+
+    return false if right.nil? || right.empty?
+
+    square_color = square.piece.color
+    right_color = right.piece.color
+
+    square_color != right_color
+  end
 end
