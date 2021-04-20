@@ -15,11 +15,11 @@ class Square
   end
 
   def piece_symbol
-    if piece.is_a? Piece
-      piece.unicode
-    else
-      piece
-    end
+    empty? ? piece : piece.unicode
+  end
+
+  def empty?
+    piece == ' '
   end
 
   def movement
