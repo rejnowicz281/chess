@@ -15,6 +15,13 @@ class Game
     place_pieces
   end
 
+  def play
+    loop do
+      play_turn('white')
+      play_turn('black')
+    end
+  end
+
   def play_turn(curr_player_color)
     puts "Current player: #{curr_player_color}."
     moving_piece = input_moving_piece(curr_player_color)
@@ -65,7 +72,7 @@ class Game
     square1 = board.get_square(square1_cords)
     square2 = board.get_square(square2_cords)
 
-    square1 != ' ' && !square2.empty? && square2.piece.color == square1.piece.color
+    !square2.empty? && square2.piece.color == square1.piece.color
   end
 
   def move(start, destination)
@@ -75,6 +82,10 @@ class Game
     destination_square.piece = start_square.piece
     destination_square.piece.previous_move = start_square.cords
     start_square.piece = ' '
+    if made_en_passant_move?(destination)
+      downwards = board.get_square(downwards_from(destination))
+      downwards.piece = ' '
+    end
   end
 
   def path_clear?(start, destination)
@@ -103,7 +114,8 @@ class Game
     square.movement.each { |move| legal_moves << move unless illegal_move?(cords, move) }
 
     if square.piece.is_a? Pawn
-      legal_moves = remove_illegal_pawn_moves(cords, legal_moves)
+      legal_moves -= illegal_pawn_moves(cords)
+      legal_moves += en_passant_moves(cords)
     end
 
     legal_moves
@@ -113,40 +125,39 @@ class Game
     invalid_path?(start, destination) || same_color?(start, destination)
   end
 
-  def made_double_step_move?(square_cords)
-    square = board.get_square(square_cords)
+  def made_double_step_move?(cords)
+    square = board.get_square(cords)
     return false unless square.piece.is_a? Pawn
 
     previous_move = square.piece.previous_move
-    backwards = bottom_of(square_cords)
-    two_backwards = bottom_of(backwards)
+    two_downwards = downwards_from(cords, 2)
 
-    previous_move == two_backwards
+    previous_move == two_downwards
   end
 
-  def left_of(square_cords)
-    "#{(square_cords[0].ord - 1).chr}#{square_cords[1]}"
+  def left_of(cords)
+    "#{(cords[0].ord - 1).chr}#{cords[1]}"
   end
 
-  def right_of(square_cords)
-    "#{(square_cords[0].ord + 1).chr}#{square_cords[1]}"
+  def right_of(cords)
+    "#{(cords[0].ord + 1).chr}#{cords[1]}"
   end
 
-  def backwards_from(square_cords)
-    square = board.get_square(square_cords)
-    "#{square_cords[0]}#{square_cords[1].to_i + (square.piece.color == 'black' ? 1 : -1)}"
+  def downwards_from(cords, i = 1)
+    color = board.get_square(cords).piece.color
+    "#{cords[0]}#{cords[1].to_i + (color == 'black' ? i : -i)}"
   end
 
-  def forwards_from(square_cords)
-    square = board.get_square(square_cords)
-    "#{square_cords[0]}#{square_cords[1].to_i + (square.piece.color == 'black' ? -1 : 1)}"
+  def forwards_from(cords, i = 1)
+    color = board.get_square(cords).piece.color
+    "#{cords[0]}#{cords[1].to_i + (color == 'black' ? -i : i)}"
   end
 
-  def enemy_on_left_of?(square_cords)
-    square = board.get_square(square_cords)
-    left = left_of(square_cords)
+  def enemy_on_left_of?(cords)
+    square = board.get_square(cords)
+    left = board.get_square(left_of(cords))
 
-    return false if left.nil? || left.empty?
+    return false if board.invalid_cords?(left_of(cords)) || left.empty?
 
     square_color = square.piece.color
     left_color = left.piece.color
@@ -154,15 +165,39 @@ class Game
     square_color != left_color
   end
 
-  def enemy_on_right_of?(square_cords)
-    square = board.get_square(square_cords)
-    right = right_of(square_cords)
+  def enemy_on_right_of?(cords)
+    square = board.get_square(cords)
+    right = board.get_square(right_of(cords))
 
-    return false if right.nil? || right.empty?
+    return false if board.invalid_cords?(right_of(cords)) || right.empty?
 
     square_color = square.piece.color
     right_color = right.piece.color
 
     square_color != right_color
+  end
+
+  def en_passant_moves(cords)
+    en_passant_moves = []
+    if enemy_on_left_of?(cords) && made_double_step_move?(left_of(cords))
+      en_passant_move = downwards_from(left_of(cords))
+      en_passant_moves << en_passant_move
+    elsif enemy_on_right_of?(cords) && made_double_step_move?(right_of(cords))
+      en_passant_move = downwards_from(right_of(cords))
+      en_passant_moves << en_passant_move
+    end
+    en_passant_moves
+  end
+
+  def made_en_passant_move?(current_pos)
+    return false if board.get_square(current_pos).empty?
+
+    previous_move = board.get_square(current_pos).piece.previous_move
+    downwards = downwards_from(current_pos)
+    forwards = forwards_from(current_pos)
+
+    en_passant_movement = [left_of(downwards), right_of(downwards), left_of(forwards), right_of(forwards)]
+
+    en_passant_movement.include?(previous_move)
   end
 end
