@@ -18,9 +18,9 @@ module PawnBehaviour
     forward_right_cords = forward_right_of(cords)
     forward_right_square = board.get_square(forward_right_cords)
 
-    illegal_moves += [one_forward_cords] unless one_forward_square.empty?
+    illegal_moves += [one_forward_cords] unless !one_forward_square.nil? && one_forward_square.empty?
 
-    illegal_moves += [two_forward_cords] unless two_forward_square.empty? && pawn_square.piece.previous_move.nil?
+    illegal_moves += [two_forward_cords] unless !two_forward_square.nil? && two_forward_square.empty? && pawn_square.piece.previous_move.nil?
 
     illegal_moves += [forward_left_cords] if !forward_left_square.nil? &&
                                            (forward_left_square.piece == ' ' ||
