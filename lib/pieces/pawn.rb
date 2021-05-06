@@ -4,6 +4,13 @@ require_relative 'piece'
 
 # pawn chess piece
 class Pawn < Piece
+  attr_accessor :en_passant_counter
+
+  def initialize(color)
+    @en_passant_counter = Hash.new(0)
+    super
+  end
+
   def unicode
     color == 'black' ? BLACK_PAWN : WHITE_PAWN
   end
