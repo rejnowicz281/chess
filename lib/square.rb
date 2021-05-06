@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-Dir['pieces/*.rb'].each { |piece| require_relative piece }
-
 # square used in board
 class Square
   attr_reader :cords, :file_cord, :rank_cord
@@ -23,7 +21,7 @@ class Square
   end
 
   def movement
-    return [] if piece == ' '
+    return [] if empty?
 
     movement = []
     piece.movement_formula.each do |formula_cords|
