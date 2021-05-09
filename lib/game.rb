@@ -83,15 +83,9 @@ class Game
   end
 
   def computer_turn(player_color)
-    viable_en_passant_pawn_squares(player_color).each do |pawn_square|
-      en_passant_moves(pawn_square.cords).each do |en_passant_move|
-        pawn_square.piece.en_passant_counter[en_passant_move] += 1
-      end
-    end
-    player_king = king_square_of(player_color).piece
+    en_passant_counters_increase(player_color)
 
-    player_king.in_check_counter += 1 if king_in_check?(player_color)
-
+    king_of(player_color).in_check_counter += 1 if king_in_check?(player_color)
     puts "Current player: #{player_color}."
 
     moving_piece = viable_pieces_to_move(player_color).sample
@@ -99,12 +93,17 @@ class Game
 
     destination = legal_moves_of(moving_piece).sample
     print "#{destination}\n\n"
-    move(moving_piece, destination)
+
+    if en_passant_moves(moving_piece).include?(destination)
+      en_passant_move(moving_piece, destination)
+    else
+      move(moving_piece, destination)
+    end
 
     promote(destination, 'queen') if promotion?(destination)
 
-    player_king.in_check_counter += 1 if king_in_check?(player_color)
-    player_king.in_check_counter = 0 if player_king.in_check_counter == 1 && !king_in_check?(player_color)
+    king_of(player_color).in_check_counter += 1 if king_in_check?(player_color)
+    king_of(player_color).in_check_counter = 0 if king_of(player_color).in_check_counter == 1 && !king_in_check?(player_color)
   end
 
   def play
@@ -116,20 +115,13 @@ class Game
   end
 
   def play_turn(player_color)
-    viable_en_passant_pawn_squares(player_color).each do |pawn_square|
-      en_passant_moves(pawn_square.cords).each do |en_passant_move|
-        pawn_square.piece.en_passant_counter[en_passant_move] += 1
-      end
-    end
+    en_passant_counters_increase(player_color)
     board.display
-    player_king = king_square_of(player_color).piece
 
-    player_king.in_check_counter += 1 if king_in_check?(player_color)
-
+    king_of(player_color).in_check_counter += 1 if king_in_check?(player_color)
     puts "Current player: #{player_color}."
 
     p king_in_check?(player_color) ? 'You are in check. Defend your king!' : 'You are NOT in check.'
-    p "In check counter: #{player_king.in_check_counter}. once it reaches 2, you lose"
 
     save_prompt if save_popup
 
@@ -139,22 +131,22 @@ class Game
       puts 'You can castle. Type yes if you want to castle:'
       choice = gets.chomp
       return castling_prompt(player_color) if choice == 'yes'
-    elsif can_en_passant?(moving_piece)
-      puts 'You can capture en passant. Type yes if you want to:'
-      choice = gets.chomp
-      return en_passant_prompt(moving_piece) if choice == 'yes'
     end
 
     puts "Legal moves: #{legal_moves_of(moving_piece)}"
 
     destination = input_destination(moving_piece)
 
-    move(moving_piece, destination)
+    if en_passant_moves(moving_piece).include?(destination)
+      en_passant_move(moving_piece, destination)
+    else
+      move(moving_piece, destination)
+    end
 
     promotion_prompt(destination) if promotion?(destination)
 
-    player_king.in_check_counter += 1 if king_in_check?(player_color)
-    player_king.in_check_counter = 0 if player_king.in_check_counter == 1 && !king_in_check?(player_color)
+    king_of(player_color).in_check_counter += 1 if king_in_check?(player_color)
+    king_of(player_color).in_check_counter = 0 if king_of(player_color).in_check_counter == 1 && !king_in_check?(player_color)
   end
 
   def enable_save_popup?
@@ -276,6 +268,7 @@ class Game
     square.movement.each { |move| legal_moves << move unless illegal_move?(cords, move) }
 
     legal_moves -= illegal_pawn_moves(cords) if square.piece.is_a? Pawn
+    legal_moves += en_passant_moves(cords) if can_en_passant?(cords)
 
     legal_moves
   end
@@ -356,16 +349,7 @@ class Game
     !en_passant_moves(pawn_cords).empty?
   end
 
-  def en_passant_prompt(pawn_cords)
-    loop do
-      puts "Possible en passant moves: #{en_passant_moves(pawn_cords)}"
-      puts 'Type in your move: '
-      en_passant_move = gets.chomp
-      return en_passant(pawn_cords, en_passant_move) if en_passant_moves(pawn_cords).include?(en_passant_move)
-    end
-  end
-
-  def en_passant(pawn_cords, en_passant_move)
+  def en_passant_move(pawn_cords, en_passant_move)
     board.get_square(pawn_cords).piece.en_passant_counter = Hash.new(0)
     move(pawn_cords, en_passant_move)
     delete_piece_from(downwards_from(en_passant_move))
@@ -373,6 +357,14 @@ class Game
 
   def viable_en_passant_pawn_squares(player_color)
     squares_of(player_color).select { |square| can_en_passant?(square.cords) }
+  end
+
+  def en_passant_counters_increase(player_color)
+    viable_en_passant_pawn_squares(player_color).each do |pawn_square|
+      en_passant_moves(pawn_square.cords).each do |en_passant_move|
+        pawn_square.piece.en_passant_counter[en_passant_move] += 1
+      end
+    end
   end
 
   def squares_of(player_color)
@@ -391,6 +383,10 @@ class Game
     squares_of(player_color).each { |square| return square.cords if square.piece.is_a? King }
   end
 
+  def king_of(player_color)
+    squares_of(player_color).each { |square| return square.piece if square.piece.is_a? King }
+  end
+
   def can_be_captured?(piece_cords)
     player_square = board.get_square(piece_cords)
     return false if player_square.empty?
@@ -407,14 +403,11 @@ class Game
   end
 
   def king_in_check?(player_color)
-    king_cords = king_square_of(player_color).cords
-    can_be_captured?(king_cords)
+    can_be_captured?(king_cords_of(player_color))
   end
 
   def checkmated?(player_color)
-    player_king = king_square_of(player_color).piece
-
-    player_king.in_check_counter == 2
+    king_of(player_color).in_check_counter == 2
   end
 
   def rook_squares_of(player_color)
@@ -442,10 +435,9 @@ class Game
   def can_castle?(player_color)
     return false if rook_squares_of(player_color).empty?
 
-    player_king = king_square_of(player_color).piece
     viable_rooks = viable_castling_rook_squares(player_color)
 
-    player_king.previous_move.nil? && !king_in_check?(player_color) && !viable_rooks.empty?
+    king_of(player_color).previous_move.nil? && !king_in_check?(player_color) && !viable_rooks.empty?
   end
 
   def castle_with(rook_cords)
