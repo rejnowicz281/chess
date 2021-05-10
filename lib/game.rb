@@ -2,12 +2,17 @@
 
 require_relative 'board'
 require_relative 'innitial_placement'
+require_relative 'castling'
+require_relative 'en_passant'
 Dir['pieces/*.rb'].each { |piece| require_relative piece }
 
 # game class
 class Game
   include InnitialPlacement
   include PawnBehaviour
+  include Castling
+  include EnPassant
+
   attr_reader :board
   attr_accessor :save_popup
 
@@ -96,6 +101,8 @@ class Game
 
     if en_passant_moves(moving_piece).include?(destination)
       en_passant_move(moving_piece, destination)
+    elsif castling_moves(moving_piece).include?(destination)
+      castling_move(moving_piece, destination)
     else
       move(moving_piece, destination)
     end
@@ -127,18 +134,15 @@ class Game
 
     moving_piece = input_moving_piece(player_color)
 
-    if moving_piece == king_cords_of(player_color) && can_castle?(player_color)
-      puts 'You can castle. Type yes if you want to castle:'
-      choice = gets.chomp
-      return castling_prompt(player_color) if choice == 'yes'
-    end
-
     puts "Legal moves: #{legal_moves_of(moving_piece)}"
+    castling_moves(moving_piece).each { |castling_move| puts "#{castling_move} is a castling move" }
 
     destination = input_destination(moving_piece)
 
     if en_passant_moves(moving_piece).include?(destination)
       en_passant_move(moving_piece, destination)
+    elsif castling_moves(moving_piece).include?(destination)
+      castling_move(moving_piece, destination)
     else
       move(moving_piece, destination)
     end
@@ -268,7 +272,8 @@ class Game
     square.movement.each { |move| legal_moves << move unless illegal_move?(cords, move) }
 
     legal_moves -= illegal_pawn_moves(cords) if square.piece.is_a? Pawn
-    legal_moves += en_passant_moves(cords) if can_en_passant?(cords)
+    legal_moves += en_passant_moves(cords)
+    legal_moves += castling_moves(cords)
 
     legal_moves
   end
@@ -303,68 +308,6 @@ class Game
   def forwards_from(cords, i = 1)
     color = board.get_square(cords).piece.color
     "#{cords[0]}#{cords[1].to_i + (color == 'black' ? -i : i)}"
-  end
-
-  def enemy_on_left_of?(cords)
-    square = board.get_square(cords)
-    left = board.get_square(left_of(cords))
-
-    return false if board.invalid_cords?(left_of(cords)) || left.empty?
-
-    square_color = square.piece.color
-    left_color = left.piece.color
-
-    square_color != left_color
-  end
-
-  def enemy_on_right_of?(cords)
-    square = board.get_square(cords)
-    right = board.get_square(right_of(cords))
-
-    return false if board.invalid_cords?(right_of(cords)) || right.empty?
-
-    square_color = square.piece.color
-    right_color = right.piece.color
-
-    square_color != right_color
-  end
-
-  def en_passant_moves(cords)
-    en_passant_moves = []
-    pawn = board.get_square(cords).piece
-    if enemy_on_left_of?(cords) && made_double_step_move?(left_of(cords))
-      en_passant_move = downwards_from(left_of(cords))
-      en_passant_moves << en_passant_move if pawn.en_passant_counter[en_passant_move] < 2
-    end
-    if enemy_on_right_of?(cords) && made_double_step_move?(right_of(cords))
-      en_passant_move = downwards_from(right_of(cords))
-      en_passant_moves << en_passant_move if pawn.en_passant_counter[en_passant_move] < 2
-    end
-    en_passant_moves
-  end
-
-  def can_en_passant?(pawn_cords)
-    return false unless board.get_square(pawn_cords).piece.is_a? Pawn
-
-    !en_passant_moves(pawn_cords).empty?
-  end
-
-  def en_passant_move(pawn_cords, en_passant_move)
-    board.get_square(pawn_cords).piece.en_passant_counter = Hash.new(0)
-    move(pawn_cords, en_passant_move)
-    delete_piece_from(downwards_from(en_passant_move))
-  end
-
-  def viable_en_passant_pawn_squares(player_color)
-    squares_of(player_color).select { |square| can_en_passant?(square.cords) }
-  end
-
-  def en_passant_counters_increase(player_color)
-    viable_en_passant_pawn_squares(player_color).each do |pawn_square|
-      en_passant_moves(pawn_square.cords).each do |en_passant_move|
-        pawn_square.piece.en_passant_counter[en_passant_move] += 1
-      end
-    end
   end
 
   def squares_of(player_color)
@@ -408,70 +351,6 @@ class Game
 
   def checkmated?(player_color)
     king_of(player_color).in_check_counter == 2
-  end
-
-  def rook_squares_of(player_color)
-    rooks = []
-    squares_of(player_color).each { |square| rooks << square if square.piece.is_a? Rook }
-    rooks
-  end
-
-  def castling_prompt(player_color)
-    loop do
-      viable_rook_cords = viable_castling_rook_squares(player_color).map(&:cords)
-      puts "Viable rook cords: #{viable_rook_cords}"
-      puts 'Type in the rook you want to castle with: '
-      rook_cords = gets.chomp
-      return castle_with(rook_cords) if viable_rook_cords.include?(rook_cords)
-    end
-  end
-
-  def viable_castling_rook_squares(player_color)
-    rook_squares_of(player_color).select do |rook_square|
-      rook_square.piece.previous_move.nil? && path_clear?(king_cords_of(player_color), rook_square.cords)
-    end
-  end
-
-  def can_castle?(player_color)
-    return false if rook_squares_of(player_color).empty?
-
-    viable_rooks = viable_castling_rook_squares(player_color)
-
-    king_of(player_color).previous_move.nil? && !king_in_check?(player_color) && !viable_rooks.empty?
-  end
-
-  def castle_with(rook_cords)
-    if left_rook?(rook_cords)
-      left_rook_castle(rook_cords)
-    elsif right_rook?(rook_cords)
-      right_rook_castle(rook_cords)
-    end
-  end
-
-  def left_rook?(rook_cords)
-    %w[a1 a8].include?(rook_cords)
-  end
-
-  def right_rook?(rook_cords)
-    %w[h1 h8].include?(rook_cords)
-  end
-
-  def left_rook_castle(rook_cords)
-    player_color = board.get_square(rook_cords).piece.color
-
-    two_left_from_king = left_of(king_cords_of(player_color), 2)
-    move(king_cords_of(player_color), two_left_from_king)
-    right_from_king = right_of(king_cords_of(player_color))
-    move(rook_cords, right_from_king)
-  end
-
-  def right_rook_castle(rook_cords)
-    player_color = board.get_square(rook_cords).piece.color
-
-    two_right_from_king = right_of(king_cords_of(player_color), 2)
-    move(king_cords_of(player_color), two_right_from_king)
-    left_from_king = left_of(king_cords_of(player_color))
-    move(rook_cords, left_from_king)
   end
 
   def place(cords, piece)
