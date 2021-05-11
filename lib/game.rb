@@ -24,47 +24,19 @@ class Game
   end
 
   def human_round
-    loop do
+    until endgame?
       play_turn('white')
-      if checkmated?('white')
-        puts 'Black wins'
-        return
-      elsif checkmated?('black')
-        puts 'White wins'
-        return
-      end
-
       play_turn('black')
-      if checkmated?('white')
-        puts 'Black wins'
-        return
-      elsif checkmated?('black')
-        puts 'White wins'
-        return
-      end
     end
+    endgame_message
   end
 
   def computer_round
-    loop do
+    until endgame?
       play_turn('white')
-      if checkmated?('white')
-        puts 'Black wins'
-        return
-      elsif checkmated?('black')
-        puts 'White wins'
-        return
-      end
-
       computer_turn('black')
-      if checkmated?('white')
-        puts 'Black wins'
-        return
-      elsif checkmated?('black')
-        puts 'White wins'
-        return
-      end
     end
+    endgame_message
   end
 
   def play_round
@@ -90,7 +62,6 @@ class Game
   def computer_turn(player_color)
     en_passant_counters_increase(player_color)
 
-    king_of(player_color).in_check_counter += 1 if king_in_check?(player_color)
     puts "Current player: #{player_color}."
 
     moving_piece = viable_pieces_to_move(player_color).sample
@@ -107,10 +78,7 @@ class Game
       move(moving_piece, destination)
     end
 
-    promote(destination, 'queen') if promotion?(destination)
-
-    king_of(player_color).in_check_counter += 1 if king_in_check?(player_color)
-    king_of(player_color).in_check_counter = 0 if king_of(player_color).in_check_counter == 1 && !king_in_check?(player_color)
+    promote(destination, %w[queen rook bishop knight].sample) if promotion?(destination)
   end
 
   def play
@@ -125,18 +93,14 @@ class Game
     en_passant_counters_increase(player_color)
     board.display
 
-    king_of(player_color).in_check_counter += 1 if king_in_check?(player_color)
     puts "Current player: #{player_color}."
-
-    p king_in_check?(player_color) ? 'You are in check. Defend your king!' : 'You are NOT in check.'
+    puts king_in_check?(player_color) ? 'You are in check. Defend your king!' : 'You are NOT in check.'
 
     save_prompt if save_popup
 
     moving_piece = input_moving_piece(player_color)
 
     puts "Legal moves: #{legal_moves_of(moving_piece)}"
-    castling_moves(moving_piece).each { |castling_move| puts "#{castling_move} is a castling move" }
-
     destination = input_destination(moving_piece)
 
     if en_passant_moves(moving_piece).include?(destination)
@@ -148,9 +112,30 @@ class Game
     end
 
     promotion_prompt(destination) if promotion?(destination)
+  end
 
-    king_of(player_color).in_check_counter += 1 if king_in_check?(player_color)
-    king_of(player_color).in_check_counter = 0 if king_of(player_color).in_check_counter == 1 && !king_in_check?(player_color)
+  def endgame_message
+    if checkmated?('black')
+      puts 'Black got checkmated, White Wins!'
+    elsif checkmated?('white')
+      puts 'White got checkmated, Black Wins!'
+    elsif stalemate?
+      puts "It's a stalemate!"
+    end
+  end
+
+  def endgame?
+    checkmated?('black') || checkmated?('white') || stalemate?
+  end
+
+  def checkmated?(player_color)
+    king = king_cords_of(player_color)
+    king_in_check?(player_color) && legal_moves_of(king).empty?
+  end
+
+  def stalemate?
+    !king_in_check?('black') && player_legal_moves('black').empty? ||
+      !king_in_check?('white') && player_legal_moves('white').empty?
   end
 
   def enable_save_popup?
@@ -224,6 +209,7 @@ class Game
 
   def input_destination(moving_piece)
     loop do
+      puts "Moving piece: #{moving_piece}"
       puts 'Type in where you want to move the piece: '
       destination = gets.chomp
       return destination if legal_moves_of(moving_piece).include?(destination)
@@ -231,10 +217,7 @@ class Game
   end
 
   def same_color?(square1_cords, square2_cords)
-    square1 = board.get_square(square1_cords)
-    square2 = board.get_square(square2_cords)
-
-    !square2.empty? && square2.piece.color == square1.piece.color
+    color_of(square2_cords) == color_of(square1_cords)
   end
 
   def move(start, destination)
@@ -264,7 +247,8 @@ class Game
     start_square.movement.nil? || !start_square.movement.include?(destination) || !path_clear?(start, destination)
   end
 
-  def legal_moves_of(cords)
+  # moves that are allowed to get the piece captured if they are made
+  def capturable_legal_moves(cords)
     square = board.get_square(cords)
 
     legal_moves = []
@@ -276,6 +260,15 @@ class Game
     legal_moves += castling_moves(cords)
 
     legal_moves
+  end
+
+  # legal moves that can't get the piece captured. Reserved for the king
+  def uncapturable_legal_moves(cords)
+    capturable_legal_moves(cords).reject { |legal_move| attacked?(legal_move, color_of(cords)) }
+  end
+
+  def legal_moves_of(cords)
+    (board.get_square(cords).piece.is_a? King) ? uncapturable_legal_moves(cords) : capturable_legal_moves(cords)
   end
 
   def illegal_move?(start, destination)
@@ -301,12 +294,12 @@ class Game
   end
 
   def downwards_from(cords, i = 1)
-    color = board.get_square(cords).piece.color
+    color = color_of(cords)
     "#{cords[0]}#{cords[1].to_i + (color == 'black' ? i : -i)}"
   end
 
   def forwards_from(cords, i = 1)
-    color = board.get_square(cords).piece.color
+    color = color_of(cords)
     "#{cords[0]}#{cords[1].to_i + (color == 'black' ? -i : i)}"
   end
 
@@ -330,29 +323,6 @@ class Game
     squares_of(player_color).each { |square| return square.piece if square.piece.is_a? King }
   end
 
-  def can_be_captured?(piece_cords)
-    player_square = board.get_square(piece_cords)
-    return false if player_square.empty?
-
-    player_color = player_square.piece.color
-    enemy_color = player_color == 'black' ? 'white' : 'black'
-    enemy_squares = squares_of(enemy_color)
-
-    enemy_squares.each do |enemy_square|
-      enemy_legal_moves = legal_moves_of(enemy_square.cords)
-      return true if enemy_legal_moves.include?(piece_cords)
-    end
-    false
-  end
-
-  def king_in_check?(player_color)
-    can_be_captured?(king_cords_of(player_color))
-  end
-
-  def checkmated?(player_color)
-    king_of(player_color).in_check_counter == 2
-  end
-
   def place(cords, piece)
     board.get_square(cords).piece = piece
   end
@@ -365,7 +335,7 @@ class Game
     return false unless board.get_square(pawn_cords).piece.is_a? Pawn
 
     pawn_rank = board.get_square(pawn_cords).rank_cord
-    pawn_color = board.get_square(pawn_cords).piece.color
+    pawn_color = color_of(pawn_cords)
 
     pawn_rank == if pawn_color == 'black'
                    1
@@ -384,7 +354,7 @@ class Game
   end
 
   def promote(pawn_cords, promotion_piece)
-    pawn_color = board.get_square(pawn_cords).piece.color
+    pawn_color = color_of(pawn_cords)
     board.get_square(pawn_cords).piece = case promotion_piece
                                          when 'queen'
                                            Queen.new(pawn_color)
@@ -396,6 +366,57 @@ class Game
                                            Knight.new(pawn_color)
                                          end
     puts "Promotion to #{promotion_piece}."
+  end
+
+  def color_of(cords)
+    return if board.get_square(cords).empty?
+
+    board.get_square(cords).piece.color
+  end
+
+  def king_in_check?(player_color)
+    attacked?(king_cords_of(player_color))
+  end
+
+  def player_legal_moves(player_color)
+    legal_moves = []
+    squares_of(player_color).each { |square| legal_moves << legal_moves_of(square.cords) }
+    legal_moves.flatten.uniq
+  end
+
+  def pawn_attacking_moves(pawn_cords)
+    forwards = forwards_from(pawn_cords)
+    forwards_left = left_of(forwards)
+    forwards_right = right_of(forwards)
+    capturable_moves = []
+    capturable_moves << forwards_left unless board.invalid_cords?(forwards_left)
+    capturable_moves << forwards_right unless board.invalid_cords?(forwards_right)
+    capturable_moves
+  end
+
+  def piece_attacking_moves(piece_cords)
+    square = board.get_square(piece_cords)
+    attacking_moves = []
+
+    attacking_moves << if square.piece.is_a? Pawn
+                         pawn_attacking_moves(square.cords)
+                       else
+                         capturable_legal_moves(piece_cords)
+                       end
+
+    attacking_moves
+  end
+
+  def player_attacking_moves(player_color)
+    player_squares = squares_of(player_color)
+    capturable_moves = []
+    player_squares.each { |square| capturable_moves << piece_attacking_moves(square.cords) }
+    capturable_moves.flatten.uniq
+  end
+
+  def attacked?(square, player_color = color_of(square))
+    enemy_color = player_color == 'black' ? 'white' : 'black'
+    player_attacking_moves(enemy_color).include?(square)
   end
 end
 
